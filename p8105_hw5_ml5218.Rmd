@@ -1,0 +1,120 @@
+---
+title: "p8105_mtp_ml5218"
+author: "Muying Li"
+date: "2025-11-11"
+output: github_document
+---
+
+```{r}
+# Load necessary packages and set plot theme 
+library(tidyverse)
+library(patchwork)
+library(dplyr)
+library(rvest)
+knitr::opts_chunk$set(
+  fig.path = "figs/",
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+# Problem 1
+```{r}
+bday_sim = function(n){
+  bday = sample(1:365, n, replace=TRUE)
+  repeated_bday = length(unique(bday))<n
+  repeated_bday
+}
+
+bday_sim_results = 
+  expand_grid(
+    # group size 2-50
+    group_size = 2:50,
+    # simulate for 10000x
+    iter = 1:10000
+  ) |> 
+  mutate(
+    result = map_lgl(group_size, bday_sim)
+  ) |> 
+  group_by(
+    group_size
+  ) |> 
+  summarize(
+    prob_repeat = mean(result)
+  )
+# plot
+bday_sim_results |> 
+  ggplot(aes(x=group_size, y=prob_repeat)) +
+  geom_point()+
+  geom_line()+
+  labs(title = "Probability of Shared Birthday",
+       x = "Group Size",
+       y = "Probability")
+```
+
+From the line plot above, we can see that the probability of at least two people sharing a birthday increases non-linearly as the group size grows. As the group size increases beyond around 20, the probability starts rising quite sharply. As the group size nears 50, the probability approaches 1, which means with about 50 people in the room, it's nearly certain that at least two people will share a birthday.
+
+# Problem 2
+```{r}
+n = 30
+sigma = 5
+mu = 0
+num_sim = 5000
+#set.seed(1)
+# generate 5000 datasets from the normal model
+simulate_t_test <- function(mu, n = 30, sigma = 5, num_sim = 5000, alpha = 0.05) {
+  results =
+    expand_grid(iter = 1:num_sim) |> 
+    mutate(
+      data = map(iter, ~rnorm(n, mean = mu, sd = sigma)),  
+      t_test = map(data, ~t.test(.x, mu = 0)),
+      t_test_result = map(t_test, broom::tidy),
+    ) |> 
+    unnest(t_test_result) |> 
+    mutate(
+      true_mu = mu,
+      mu_hat = estimate,
+      p_value = p.value,
+      rejected = p_value < alpha
+    ) |> 
+    select(iter, true_mu, mu_hat, p_value, rejected) 
+  results
+}
+
+# set mu=0
+# simulate_t_test(0)
+
+# repeat for mu={1,2,3,4,5,6}
+mu <- c(0, 1, 2, 3, 4, 5, 6)
+simulate_t_tests <- map_dfr(mu, ~simulate_t_test(mu = .x))
+
+power <- 
+  simulate_t_tests |> 
+  group_by(true_mu) |> 
+  summarize(
+    power = mean(rejected)
+  )
+
+# plot
+ggplot(power, aes(x = mu, y = power)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "The association between effect size and power",
+    x = "Effect size",
+    y = "Power"
+  )
+```
+From the plot above, we can tell that the association between effect size and power positive. As the effect size increases, the power of the test increases. Give the `alpha=0.05`, the power reaches about 1 as the effect size increases to 4 and above. 
+
