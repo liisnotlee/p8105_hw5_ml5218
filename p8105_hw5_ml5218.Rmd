@@ -72,7 +72,7 @@ n = 30
 sigma = 5
 mu = 0
 num_sim = 5000
-#set.seed(1)
+set.seed(1)
 # generate 5000 datasets from the normal model
 simulate_t_test <- function(mu, n = 30, sigma = 5, num_sim = 5000, alpha = 0.05) {
   results =
@@ -146,3 +146,141 @@ simulate_t_tests |>
 Based on the plot above, the sample average of $\hat\mu$ across tests for which the null is rejected is approximately equal to the true value of $\mu$, especially as the true value of $\mu$ increases. This is because when the null hypothesis is rejected, it indicates a significant difference between the sample mean and the null hypothesis mean and there is enough evidence that the sample mean is not close to 0. This suggests that the sample mean tends to be closer to the true population mean $\mu$. The larger $\mu$, larger effect size, which is easier to detect, resulting in a sample mean estimate that is more accurate.
 
 # Problem 3
+
+
+```{r}
+# load data and clean names
+data = read_csv("data/homicide-data.csv") |>
+  janitor::clean_names()
+
+head(data, 10)
+```
+
+## Dataset Description
+The data was collected by the Washington Post on `r nrow(data)` criminal homicides over the past decade in 50 of the largest American cities. It contains `r ncol(data)` variables:
+
+- `uid`: the unique identifier of each homicide case
+- `reported_data`: date when the violent crime was reported 
+- basic demographic information about the victim: `victim_last` (victim's last name), `victim_first` (victim's first name), `victim_race`, `victim_age`, `victim_sex`
+- location of the killing related data: `city`, `state`, `lat` and `lon` (latitude and longitude)
+- `disposition`: indication of whether an arrest was made
+
+## Estimation of the proportion of unsolved homicides in Baltimore, MD
+```{r}
+homicide_summary <- 
+  data |> 
+  # Create a city_state variable (e.g. “Baltimore, MD”) 
+  mutate(
+    city_state = paste(str_trim(city), str_trim(state), sep = ", "),
+  ) |>
+  # summarize within cities to obtain the total number of homicides and the number of unsolved homicides (those for which the disposition is “Closed without arrest” or “Open/No arrest”).
+  group_by(city_state) |>
+  summarize(
+    total = n(),
+    unsolved = sum(tolower(str_trim(disposition)) %in% c("closed without arrest", "open/no arrest")),
+  )
+  
+# For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved
+baltimore_data <- 
+  homicide_summary |> 
+  filter(
+    city_state == "Baltimore, MD"
+  ) 
+# save the output of prop.test as an R object
+baltimore_prop <-
+  prop.test(
+    x = pull(baltimore_data,unsolved),
+    n = pull(baltimore_data,total)
+  ) 
+# apply the broom::tidy to this object
+baltimore_prop |> 
+  broom::tidy() |> 
+  # pull the estimated proportion and confidence intervals from the resulting tidy dataframe
+  select(
+    estimate,
+    conf.low,
+    conf.high
+  )
+```
+
+
+## Estimation of the proportion of unsolved homicides for all cities
+
+```{r}
+prop_test <- function(unsolved, total) {
+  test_result <- prop.test(x = unsolved, n = total)
+  broom::tidy(test_result) |>
+    select(estimate, conf.low, conf.high)
+}
+
+props <- 
+  homicide_summary |>
+  # run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each.
+  mutate(
+    results = map2(
+      .x = unsolved, 
+      .y = total,    
+      .f = prop_test
+    )
+  ) |>
+  #  list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
+  unnest(results) 
+
+props
+```
+
+### Visualization of the estimates and CIs
+```{r}
+# Create a plot that shows the estimates and CIs for each city
+
+props |> 
+  mutate(
+    # Organize cities according to the proportion of unsolved homicides.
+    city_state = reorder(city_state, estimate)
+  ) |> 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point(size = 3) + 
+  # add geom_errorbar for a way to add error bars based on the upper and lower limits
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high), 
+    width = 0.2,  
+  ) +
+  labs(
+    title = "Proportion of Unsolved Homicides by City",
+    x = "City",
+    y = "Estimated Proportion of Unsolved Homicides",
+    caption = "Error bars represent the 95% confidence intervals"
+  ) +
+  theme(
+    # rotate and adjust size of x-axis labels
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Flip the axises for better view:
+```{r}
+props |> 
+  mutate(
+    # Organize cities according to the proportion of unsolved homicides.
+    city_state = reorder(city_state, estimate)
+  ) |> 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point(size = 2) + 
+  # add geom_errorbar for a way to add error bars based on the upper and lower limits
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high), 
+    width = 0.8,  
+  ) +
+  labs(
+    title = "Proportion of Unsolved Homicides by City",
+    x = "City",
+    y = "Estimated Proportion of Unsolved Homicides",
+    caption = "Error bars represent the 95% confidence intervals"
+  ) +
+  coord_flip()+
+  theme(
+    # rotate and adjust size of x-axis labels
+    axis.text.y = element_text(size = 6)
+  )
+```
+
