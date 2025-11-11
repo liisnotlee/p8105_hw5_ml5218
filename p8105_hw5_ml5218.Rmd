@@ -10,7 +10,7 @@ output: github_document
 library(tidyverse)
 #library(patchwork)
 #library(dplyr)
-library(rvest)
+# library(rvest)
 knitr::opts_chunk$set(
   fig.path = "figs/",
   fig.width = 6,
@@ -30,6 +30,7 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 
 # Problem 1
+
 ```{r}
 bday_sim = function(n){
   bday = sample(1:365, n, replace=TRUE)
@@ -63,10 +64,10 @@ bday_sim_results |>
        y = "Probability")
 ```
 
-
 From the line plot above, we can see that the probability of at least two people sharing a birthday increases non-linearly as the group size grows. As the group size increases beyond around 20, the probability starts rising quite sharply. As the group size nears 50, the probability approaches 1, which means with about 50 people in the room, it's nearly certain that at least two people will share a birthday.
 
 # Problem 2
+
 ```{r}
 n = 30
 sigma = 5
@@ -118,8 +119,7 @@ ggplot(power, aes(x = mu, y = power)) +
   )
 ```
 
-
-From the plot above, we can tell that the association between effect size and power positive. As the effect size increases, the power of the test increases. Give the `alpha=0.05`, the power reaches about 1 as the effect size increases to 4 and above. 
+From the plot above, we can tell that the association between effect size and power positive. As the effect size increases, the power of the test increases. Give the `alpha=0.05`, the power reaches about 1 as the effect size increases to 4 and above.
 
 ```{r}
 simulate_t_tests |>
@@ -142,11 +142,9 @@ simulate_t_tests |>
 
 ```
 
-
 Based on the plot above, the sample average of $\hat\mu$ across tests for which the null is rejected is approximately equal to the true value of $\mu$, especially as the true value of $\mu$ increases. This is because when the null hypothesis is rejected, it indicates a significant difference between the sample mean and the null hypothesis mean and there is enough evidence that the sample mean is not close to 0. This suggests that the sample mean tends to be closer to the true population mean $\mu$. The larger $\mu$, larger effect size, which is easier to detect, resulting in a sample mean estimate that is more accurate.
 
 # Problem 3
-
 
 ```{r}
 # load data and clean names
@@ -157,15 +155,17 @@ head(data, 10)
 ```
 
 ## Dataset Description
+
 The data was collected by the Washington Post on `r nrow(data)` criminal homicides over the past decade in 50 of the largest American cities. It contains `r ncol(data)` variables:
 
-- `uid`: the unique identifier of each homicide case
-- `reported_data`: date when the violent crime was reported 
-- basic demographic information about the victim: `victim_last` (victim's last name), `victim_first` (victim's first name), `victim_race`, `victim_age`, `victim_sex`
-- location of the killing related data: `city`, `state`, `lat` and `lon` (latitude and longitude)
-- `disposition`: indication of whether an arrest was made
+-   `uid`: the unique identifier of each homicide case
+-   `reported_data`: date when the violent crime was reported
+-   basic demographic information about the victim: `victim_last` (victim's last name), `victim_first` (victim's first name), `victim_race`, `victim_age`, `victim_sex`
+-   location of the killing related data: `city`, `state`, `lat` and `lon` (latitude and longitude)
+-   `disposition`: indication of whether an arrest was made
 
 ## Estimation of the proportion of unsolved homicides in Baltimore, MD
+
 ```{r}
 homicide_summary <- 
   data |> 
@@ -203,7 +203,6 @@ baltimore_prop |>
   )
 ```
 
-
 ## Estimation of the proportion of unsolved homicides for all cities
 
 ```{r}
@@ -230,6 +229,7 @@ props
 ```
 
 ### Visualization of the estimates and CIs
+
 ```{r}
 # Create a plot that shows the estimates and CIs for each city
 
@@ -239,11 +239,11 @@ props |>
     city_state = reorder(city_state, estimate)
   ) |> 
   ggplot(aes(x = city_state, y = estimate)) +
-  geom_point(size = 3) + 
+  geom_point(size = 1) + 
   # add geom_errorbar for a way to add error bars based on the upper and lower limits
   geom_errorbar(
     aes(ymin = conf.low, ymax = conf.high), 
-    width = 0.2,  
+    width = 0.3,  
   ) +
   labs(
     title = "Proportion of Unsolved Homicides by City",
@@ -253,11 +253,12 @@ props |>
   ) +
   theme(
     # rotate and adjust size of x-axis labels
-    axis.text.x = element_text(angle = 45, hjust = 1)
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6)
   )
 ```
 
 Flip the axises for better view:
+
 ```{r}
 props |> 
   mutate(
@@ -265,7 +266,7 @@ props |>
     city_state = reorder(city_state, estimate)
   ) |> 
   ggplot(aes(x = city_state, y = estimate)) +
-  geom_point(size = 2) + 
+  geom_point(size = 1) + 
   # add geom_errorbar for a way to add error bars based on the upper and lower limits
   geom_errorbar(
     aes(ymin = conf.low, ymax = conf.high), 
@@ -280,7 +281,6 @@ props |>
   coord_flip()+
   theme(
     # rotate and adjust size of x-axis labels
-    axis.text.y = element_text(size = 6)
+    axis.text.y = element_text(size = 4)
   )
 ```
-
